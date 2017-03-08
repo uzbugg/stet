@@ -16,6 +16,8 @@ class ClientZ:
     def GetMsg(self):
         while 1:
             data = self.core.get()
+            if not data:
+                continue;
             data = json.loads(data)
             print(data[0]['nick'], ": ", data[1]['msg'])
 

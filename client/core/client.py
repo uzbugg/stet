@@ -30,6 +30,8 @@ class Core:
     def get(self):
         data = self.sock.recv(1024)
         data = data.decode('utf-8')
+        if data[0] == '/':
+            return 0
         return data
 
     '''

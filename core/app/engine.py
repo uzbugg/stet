@@ -37,6 +37,8 @@ class Engine():
 
     def get(self):
         data, addr = self.sock.recvfrom(1024)
+        if data.decode('utf-8')[0] == '/':
+            self.switch(data.decode('utf-8'), addr)
         return data, addr
 
     '''
@@ -66,32 +68,41 @@ class Engine():
     active connections watcher
     '''
     def ping(self):
-        def getpong(client):
-            data, address = self.sock.recvfrom(1024)
-            '''
-            Do some checking of response if needed here.
-            '''
-            if address == client:
-                return 1
-            else:
-                return 0
+        print("Client checking... ")
+        self.stop = 1
+        self.current = ""
+        while 1:
+            for remote in self.connections:
+                self.current = remote
+                print(self.current[0])
+                self.post("/ping".encode('utf-8'), remote)
+                end_t = int(time.time() + 5)
 
-        def check(client):
-            data = "/ping"
-            self.sock.sendto(data, client)
-            active = getpong(client)
-            if active == 1:
-                return 1;
-            else:
-                return 0;
-        i = 0
+                while int(time.time()) <= end_t:
+                    print( 'a' )
 
-        for conn in self.connections:
-            res = check(conn)
-            if res == 0:
-                '''
-                delete connection if no response came back
-                '''
-                del self.connections[i]
-            else:
-                continue
+                print("end time: " + str(int(end_t)))
+                if self.stop == 1:
+                    '''
+                    remove client
+                    '''
+                    self.connections.remove(remote)
+                    print("client: " + remote[0] + " deleted")
+
+                self.stop = 1
+            time.sleep(5)
+
+    def pong(self, remote):
+        if remote == self.current:
+            self.stop = 0
+
+
+    def switch(self, do, arg):
+        options = {
+            "pong" : self.pong,
+        }
+
+        if command[1:] in options:
+            options[command[1:]](arg)
+        else:
+            pass
