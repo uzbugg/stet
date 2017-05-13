@@ -8,12 +8,12 @@ import sys
 '''
 Server
 '''
-
 class Engine():
     def __init__(self):
 
         self.sock = 0
         self.connections = []
+        self.udata = {}
 
     def createServer(self, ip, port, socktype = 'udp'):
 
@@ -21,24 +21,20 @@ class Engine():
 
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.sock.bind((socket.gethostname(), port))
-            '''
-            except:
-                print("Failed to start the server.")
-                print("Error: ")
-                print(sys.exc_info()[0])
-                return 0
-            '''
+
             return 1
 
         else:
             print("tcp not available yet")
             return 0
 
-
     def get(self):
+
         data, addr = self.sock.recvfrom(1024)
         if data.decode('utf-8')[0] == '/':
             self.switch(data.decode('utf-8'), addr)
+            #if returned data, addr ?? - display action message
+            return None, addr
         return data, addr
 
     '''
@@ -49,14 +45,16 @@ class Engine():
         data is the data to be sent ofc
         client is a list (ip, port)
         '''
-        self.sock.sendto(data, client)
+        self.sock.sendto(data.encode('utf-8'), client)
 
     '''
     broadcasting - sending bytes to all connections
     '''
     def broadcast(self, data):
         for conn in self.connections:
-            self.sock.sendto(data, conn)
+            if  data:
+                self.sock.sendto(data, conn)
+            continue
 
     '''
     keeping track of active connnections
@@ -64,45 +62,53 @@ class Engine():
     def onconnect(self, new):
         if new not in self.connections:
             self.connections.append(new)
+            uid = new[0] + ':' + str(new[1]) #special ID, if user cant be accessed delete u data also
+            entry = {}
+            entry['port'] = new[1]
+            entry['time'] = time.time()
+            self.udata[uid] = entry
     '''
     active connections watcher
     '''
-    def ping(self):
-        print("Client checking... ")
-        self.stop = 1
-        self.current = ""
-        while 1:
-            for remote in self.connections:
-                self.current = remote
-                print(self.current[0])
-                self.post("/ping".encode('utf-8'), remote)
-                end_t = int(time.time() + 5)
-
-                while int(time.time()) <= end_t:
-                    print( 'a' )
-
-                print("end time: " + str(int(end_t)))
-                if self.stop == 1:
-                    '''
-                    remove client
-                    '''
-                    self.connections.remove(remote)
-                    print("client: " + remote[0] + " deleted")
-
-                self.stop = 1
-            time.sleep(5)
+    def ping(self, client):
+        uid = client[0] + ':' + str(client[1])
+        newtime = time.time()
+        try:
+            self.udata[uid]['time'] = newtime
+            #self.pong(client)
+        except KeyError:
+            pass
 
     def pong(self, remote):
-        if remote == self.current:
-            self.stop = 0
+        self.post('1', remote)
 
+    def clientCheck(self):
+        while 1:
+            for c in self.connections:
+                uid = c[0] + ":" + str(c[1])
+                cltime = self.udata[uid]['time']
+
+                if time.time() - float(cltime) >= 30:
+                    self.post('/ping', c)
+                    wait = time.time()
+                    while 1:
+                        if cltime != self.udata[uid]['time']:
+                            break
+                        if time.time() >= float(cltime):
+                            break
+                    if float(cltime) == self.udata[uid]['time']:
+                        self.connections.remove(c)
+                        del self.udata[uid]
+
+        time.sleep(30)
 
     def switch(self, do, arg):
         options = {
             "pong" : self.pong,
+            "ping" : self.ping,
         }
 
-        if command[1:] in options:
-            options[command[1:]](arg)
+        if do[1:] in options:
+            options[do[1:]](arg)
         else:
             pass

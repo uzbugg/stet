@@ -7,11 +7,12 @@ import sys
 class ClientZ:
     def __init__(self):
         self.core = Core()
-        self.core.create('127.0.0.1', 4444)
-        self.nick = 'A'
+        self.core.create('127.0.0.1', 8000)
+        self.nick = 'r+'
 
         threading.Thread(target=self.SendMsg).start()
         threading.Thread(target=self.GetMsg).start()
+        threading.Thread(target=self.core.ping()).start()
 
     def GetMsg(self):
         while 1:
@@ -19,7 +20,11 @@ class ClientZ:
             if not data:
                 continue;
             data = json.loads(data)
-            print(data[0]['nick'], ": ", data[1]['msg'])
+            try:
+                print(data[0]['nick'], ": ", data[1]['msg'])
+            except ValueError:
+                pass
+
 
     def SendMsg(self):
         while 1:

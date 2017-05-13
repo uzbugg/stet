@@ -30,8 +30,18 @@ class Core:
     def get(self):
         data = self.sock.recv(1024)
         data = data.decode('utf-8')
-        if data[0] == '/':
-            return 0
+
+        '''
+        waiting for server response, add a function to let usr know srv is down and stuff u know
+        '''
+        if data == '/pong':
+            data = None
+            return data
+        if data == '/ping':
+            self.sock.sendto('/ping'.encode('utf-8'), self.remote)
+            data = None
+            return data
+
         return data
 
     '''
@@ -45,7 +55,18 @@ class Core:
     other tweakZZ
     '''
     def pong(self):
-        pass
+        data = '/pong'
+        self.sock.sendto(data.encode('utf-8'), self.remote)
+
+    def ping(self, rem = 0):
+        data = '/ping'
+        if rem == 1:
+            self.sock.sendto(data.encode('utf-8'), self.remote)
+            return 0
+
+        while 1:
+            self.sock.sendto(data.encode('utf-8'), self.remote)
+            time.sleep(5)
 
     def disconnect(self):
         pass
